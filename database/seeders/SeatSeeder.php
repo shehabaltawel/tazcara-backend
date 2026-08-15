@@ -30,8 +30,9 @@ class SeatSeeder extends Seeder
         }
 
         $seats = collect(range(1, self::SEATS_PER_BUS))
-            ->map(fn (int $n) => ['bus_id' => $bus->id, 'code' => "A{$n}"]);
+            ->map(fn (int $n) => ['code' => "A{$n}"]);
 
-        $bus->seats()->insert($seats->all());
+
+        $bus->seats()->createMany($seats->all());
     }
 }
