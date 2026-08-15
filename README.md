@@ -76,10 +76,16 @@ Seeders populate the data you need to try the API:
 
 - a test user,
 - cities (`CAI`, `FYM`, `MNY`, `ASY`, `ALX`, …),
-- two buses and their seats (12 seats per bus),
+- six buses (First Class, Business, Standard) with 12 seats each,
 - two trips with ordered stops, per-leg prices, and departure/arrival timestamps.
 
 The entrypoint seeds only on an **empty** database and never in `production`. To reset everything locally: `make fresh` (protected by the `APP_ENV` guard — see `Makefile`).
+
+A ready-to-import database dump with the exact seeded data is committed at `database/dumps/tazcara.sql`:
+
+```bash
+mysql -h 127.0.0.1 -P 3307 -u tazcara -p tazcara_db < database/dumps/tazcara.sql
+```
 
 ### Test user
 
