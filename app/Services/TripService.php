@@ -45,9 +45,8 @@ class TripService
     private function findMatchingTrips(City $fromCity, City $toCity, string $date): Collection
     {
         return Trip::query()
-            ->whereDate('departure_timestamp', $date)
-            ->whereHas('tripCities', fn ($query) => $query->where('city_id', $fromCity->id))
-            ->whereHas('tripCities', fn ($query) => $query->where('city_id', $toCity->id))
+            ->departingOn($date)
+            ->servingCities($fromCity->id, $toCity->id)
             ->with(['fromCity', 'toCity', 'bus'])
             ->with(['tripCities' => fn ($query) => $query->orderBy('sequence')->with('city')])
             ->get()

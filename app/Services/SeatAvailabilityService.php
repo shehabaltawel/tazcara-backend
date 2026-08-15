@@ -21,8 +21,7 @@ class SeatAvailabilityService
      */
     public function availableSeatsFor(Trip $trip, int $fromSequence, int $toSequence): Collection
     {
-        return Seat::query()
-            ->where('bus_id', $trip->bus_id)
+        return Seat::forBus($trip->bus_id)
             ->whereNotIn('id', $this->takenSeatIds($trip, $fromSequence, $toSequence))
             ->orderBy('code')
             ->get();
@@ -57,8 +56,8 @@ class SeatAvailabilityService
     {
         $overlap = Booking::query()
             ->confirmed()
+            ->onTrip($trip->id)
             ->where('seat_id', $seat->id)
-            ->whereHas('fromTripCity', fn ($query) => $query->where('trip_id', $trip->id))
             ->get()
             ->contains(fn (Booking $booking) => $this->bookingOverlaps($booking, $trip, $fromSequence, $toSequence));
 
@@ -74,7 +73,7 @@ class SeatAvailabilityService
     {
         return Booking::query()
             ->confirmed()
-            ->whereHas('fromTripCity', fn ($query) => $query->where('trip_id', $trip->id))
+            ->onTrip($trip->id)
             ->get()
             ->filter(fn (Booking $booking) => $this->bookingOverlaps($booking, $trip, $fromSequence, $toSequence))
             ->pluck('seat_id');

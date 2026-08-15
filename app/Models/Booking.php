@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -38,9 +39,19 @@ class Booking extends Model
     /**
      * Scope the query to confirmed bookings only.
      */
-    public function scopeConfirmed(Builder $query): Builder
+    #[Scope]
+    protected function confirmed(Builder $query): Builder
     {
         return $query->where('status', 'confirmed');
+    }
+
+    /**
+     * Scope the query to bookings made on the given trip.
+     */
+    #[Scope]
+    protected function onTrip(Builder $query, int $tripId): Builder
+    {
+        return $query->whereHas('fromTripCity', fn ($query) => $query->where('trip_id', $tripId));
     }
 
     /**

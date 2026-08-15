@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -44,6 +46,27 @@ class Trip extends Model
             'departure_timestamp' => 'datetime',
             'arrival_timestamp' => 'datetime',
         ];
+    }
+
+    /**
+     * Scope the query to trips departing on the given date.
+     */
+    #[Scope]
+    protected function departingOn(Builder $query, string $date): Builder
+    {
+        return $query->whereDate('departure_timestamp', $date);
+    }
+
+    /**
+     * Scope the query to trips whose stops include both cities.
+     * Order is not enforced here — use the service layer for leg order.
+     */
+    #[Scope]
+    protected function servingCities(Builder $query, int $fromCityId, int $toCityId): Builder
+    {
+        return $query
+            ->whereHas('tripCities', fn ($query) => $query->where('city_id', $fromCityId))
+            ->whereHas('tripCities', fn ($query) => $query->where('city_id', $toCityId));
     }
 
     /**
