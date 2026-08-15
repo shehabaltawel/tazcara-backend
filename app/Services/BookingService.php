@@ -34,19 +34,19 @@ class BookingService
 
         throw_if(
             count($data['seats']) !== $seats->count(),
-            fn() => new ModelNotFoundException('One or more seats not found')
+            fn () => new ModelNotFoundException('One or more seats not found')
         );
 
         throw_if(
             $trip->departure_timestamp->toDateString() !== $data['date'],
-            fn() => new InvalidArgumentException('Trip does not depart on the given date')
+            fn () => new InvalidArgumentException('Trip does not depart on the given date')
         );
 
         $leg = $this->seatAvailability->legStops($trip, $data['from_city'], $data['to_city']);
 
         throw_if(
             $leg === null,
-            fn() => new InvalidArgumentException('Invalid trip leg')
+            fn () => new InvalidArgumentException('Invalid trip leg')
         );
 
         $price = (float) $leg['to_trip_city']->price_from_origin
@@ -61,7 +61,7 @@ class BookingService
 
             throw_if(
                 $lockedSeats->contains(fn (Seat $seat) => $seat->bus_id !== $trip->bus_id),
-                fn() => new InvalidArgumentException('One or more seats do not belong to this trip')
+                fn () => new InvalidArgumentException('One or more seats do not belong to this trip')
             );
 
             $unavailable = $lockedSeats->reject(
@@ -75,7 +75,7 @@ class BookingService
 
             throw_if(
                 $unavailable->isNotEmpty(),
-                fn() => new Exception(
+                fn () => new Exception(
                     'Seat(s) '.$unavailable->pluck('code')->implode(', ').' are no longer available for the requested leg'
                 )
             );

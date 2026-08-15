@@ -5,8 +5,8 @@ namespace Database\Seeders;
 use App\Models\Bus;
 use App\Models\City;
 use App\Models\Trip;
-use Illuminate\Database\Seeder;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Seeder;
 
 /**
  * A class seeds the trips and their stops (trip_cities).

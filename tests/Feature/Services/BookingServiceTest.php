@@ -39,7 +39,7 @@ it('throws and books nothing when a seat is already taken', function (): void {
     $this->bookSeat($trip, 'S1', 'CAI', 'MNY');
 
     expect(fn () => $this->bookingService->bookMany($trip, $this->user, $this->bookingData($trip, ['S1'], 'CAI', 'ASY')))
-        ->toThrow(\Exception::class, 'S1');
+        ->toThrow(Exception::class, 'S1');
 
     expect(Booking::count())->toBe(1);
 });
@@ -49,7 +49,7 @@ it('is atomic when only some of the requested seats are free', function (): void
     $this->bookSeat($trip, 'S1', 'CAI', 'MNY');
 
     expect(fn () => $this->bookingService->bookMany($trip, $this->user, $this->bookingData($trip, ['S1', 'S2'], 'CAI', 'ASY')))
-        ->toThrow(\Exception::class);
+        ->toThrow(Exception::class);
 
     expect(Booking::count())->toBe(1);
 });
@@ -68,7 +68,7 @@ it('rejects a reversed leg', function (): void {
     $trip = $this->standardTrip();
 
     expect(fn () => $this->bookingService->bookMany($trip, $this->user, $this->bookingData($trip, ['S1'], 'ASY', 'CAI')))
-        ->toThrow(\InvalidArgumentException::class, 'Invalid trip leg');
+        ->toThrow(InvalidArgumentException::class, 'Invalid trip leg');
 });
 
 it('rejects a seat that does not belong to the trip bus', function (): void {
@@ -79,7 +79,7 @@ it('rejects a seat that does not belong to the trip bus', function (): void {
     $data['seats'] = [$foreignSeat->uuid];
 
     expect(fn () => $this->bookingService->bookMany($trip, $this->user, $data))
-        ->toThrow(\InvalidArgumentException::class, 'do not belong to this trip');
+        ->toThrow(InvalidArgumentException::class, 'do not belong to this trip');
 });
 
 it('rejects a trip that does not depart on the given date', function (): void {
@@ -89,7 +89,7 @@ it('rejects a trip that does not depart on the given date', function (): void {
     $data['date'] = $trip->departure_timestamp->copy()->addDay()->toDateString();
 
     expect(fn () => $this->bookingService->bookMany($trip, $this->user, $data))
-        ->toThrow(\InvalidArgumentException::class, 'does not depart');
+        ->toThrow(InvalidArgumentException::class, 'does not depart');
 });
 
 it('throws a ModelNotFoundException when a seat does not exist', function (): void {

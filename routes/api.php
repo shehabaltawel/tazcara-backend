@@ -1,8 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\GetAvailableTripSeatsController;
 use App\Http\Controllers\Api\V1\StoreTripBookingController;
-use App\Http\Controllers\Api\V1\Auth\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
