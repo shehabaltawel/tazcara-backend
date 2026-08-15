@@ -14,8 +14,9 @@ return new class extends Migration
         Schema::create('seats', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
-            $table->foreignId('bus_id')->unique()->constrained('buses');
-            $table->string('code')->unique();
+            $table->foreignId('bus_id')->constrained('buses');
+            $table->string('code');
+            $table->unique(['bus_id', 'code']);
             $table->timestamps();
             $table->softDeletes();
         });
