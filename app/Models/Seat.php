@@ -8,12 +8,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['class', 'plate_number'])]
+#[Fillable(['bus_id', 'code'])]
 
 /**
- * Bus Model
+ * Seat Model
  */
-class Bus extends Model
+class Seat extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
 
@@ -34,10 +34,10 @@ class Bus extends Model
     }
 
     /**
-     * Get the seats for the bus.
+     * Get the bus for the seat.
      */
-    public function seats()
+    public function bus()
     {
-        return $this->hasMany(Seat::class);
+        return $this->belongsTo(Bus::class);
     }
 }

@@ -12,6 +12,13 @@ if [ ! -f .env ]; then
     cp .env.example .env
 fi
 
+# 1b. The source tree is bind-mounted over the image's vendor/. On a fresh
+#     clone there's no host vendor/ yet, so install dependencies first.
+if [ ! -f vendor/autoload.php ]; then
+    echo "vendor/ not found — running composer install..."
+    composer install --no-interaction --no-progress
+fi
+
 # 2. Generate the app key if it's not already set
 if ! grep -q "^APP_KEY=base64" .env; then
     php artisan key:generate --force
@@ -26,9 +33,23 @@ until php artisan db:show > /dev/null 2>&1; do
 done
 echo "Database is ready."
 
-# 4. Run migrations + seeders (stations, trips, buses, seats, admin user)
+# 4. Run migrations. Idempotent — only pending ones apply.
 php artisan migrate --force
-php artisan db:seed --force
+
+# 5. Seed only on a first boot (empty database). Seeders here aren't
+#    idempotent (e.g. SeatSeeder inserts), so re-running against existing
+#    data would crash the container on every restart. And never in prod.
+if [ "${APP_ENV:-local}" != "production" ]; then
+    USER_COUNT=$(php artisan tinker --execute="echo \App\Models\User::count();" 2>/dev/null)
+    if [ "${USER_COUNT:-x}" = "0" ]; then
+        echo "Database is empty — seeding..."
+        php artisan db:seed --force
+    else
+        echo "Database already has data — skipping db:seed (use 'make fresh' to reseed)."
+    fi
+else
+    echo "Skipping db:seed in production (APP_ENV=production)."
+fi
 
 echo "Laravel app is ready."
 
