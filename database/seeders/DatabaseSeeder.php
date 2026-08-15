@@ -21,5 +21,10 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+
+        $this->call([
+            CitySeeder::class,
+            BusSeeder::class,
+        ]);
     }
 }
