@@ -19,7 +19,7 @@ class BookingResource extends JsonResource
 
         return [
             'id' => $this->uuid,
-            'status' => $this->status,
+            'status' => $this->status->value,
             'price' => $this->price,
             'seat' => [
                 'id' => $this->seat?->uuid,

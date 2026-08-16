@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\RouteKey;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -10,8 +11,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Enums\BookingStatusEnum;
 
 #[Fillable(['user_id', 'seat_id', 'from_trip_city_id', 'to_trip_city_id', 'price', 'status'])]
+#[RouteKey('uuid')]
 
 /**
  * Booking Model
@@ -19,6 +22,16 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Booking extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
+
+    /**
+     * Get the attributes that should be cast.
+     */
+    protected function casts(): array
+    {
+        return [
+            'status' => BookingStatusEnum::class,
+        ];
+    }
 
     /**
      * Get the columns that should receive a unique identifier.
@@ -29,20 +42,12 @@ class Booking extends Model
     }
 
     /**
-     * Get the route key for the model.
-     */
-    public function getRouteKeyName(): string
-    {
-        return 'uuid';
-    }
-
-    /**
      * Scope the query to confirmed bookings only.
      */
     #[Scope]
     protected function confirmed(Builder $query): Builder
     {
-        return $query->where('status', 'confirmed');
+        return $query->where('status', BookingStatusEnum::CONFIRMED->value);
     }
 
     /**

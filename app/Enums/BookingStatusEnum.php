@@ -3,9 +3,7 @@
 namespace App\Enums;
 
 /**
- * Enum OdooSettingKeyEnum
- *
- * Defines Odoo settings key enumeration
+ * Booking Status Enum
  */
 enum BookingStatusEnum: string
 {

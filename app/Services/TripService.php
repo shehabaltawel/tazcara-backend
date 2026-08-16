@@ -17,42 +17,49 @@ class TripService
      * Find trips departing on the given date whose ordered stops contain
      * both cities in the right sequence, with each trip's seats available
      * for the requested leg (from_city -> to_city).
-     *
-     * @param  array{from_city: string, to_city: string, date: string}  $data
      */
     public function getAvailableTripSeats(array $data): Collection
     {
         $fromCity = City::where('uuid', $data['from_city'])->firstOrFail();
         $toCity = City::where('uuid', $data['to_city'])->firstOrFail();
 
-        return $this->findMatchingTrips($fromCity, $toCity, $data['date'])
-            ->each(function (Trip $trip) use ($data): void {
-                $leg = $this->seatAvailability->legStops($trip, $data['from_city'], $data['to_city']);
+        [$trips, $legsByTripId] = $this->matchingTripsWithLegs($fromCity, $toCity, $data['date']);
 
-                $trip->setRelation(
-                    'availableSeats',
-                    $leg === null
-                        ? new Collection
-                        : $this->seatAvailability->availableSeatsFor($trip, $leg['from_sequence'], $leg['to_sequence'])
-                );
-            });
+        $seatsByTripId = $this->seatAvailability->availableSeatsForMany($trips, $legsByTripId);
+
+        return $trips->each(
+            fn (Trip $trip) => $trip
+                ->setRelation('availableSeats', $seatsByTripId[$trip->id] ?? new Collection)
+                ->setRelation('requestedFromCity', $fromCity)
+                ->setRelation('requestedToCity', $toCity)
+                ->setAttribute('requested_date', $data['date'])
+        );
     }
 
     /**
-     * Trips on the given date whose ordered stops include both cities
-     * in the right sequence.
+     * Trips on the given date whose ordered stops include both cities in
+     * the right sequence, paired with each trip's already-computed leg —
+     * legStops() is evaluated exactly once per trip, not recomputed later.
      */
-    private function findMatchingTrips(City $fromCity, City $toCity, string $date): Collection
+    private function matchingTripsWithLegs(City $fromCity, City $toCity, string $date): array
     {
-        return Trip::query()
+        $trips = Trip::query()
             ->departingOn($date)
             ->servingCities($fromCity->id, $toCity->id)
             ->with(['fromCity', 'toCity', 'bus'])
             ->with(['tripCities' => fn ($query) => $query->orderBy('sequence')->with('city')])
-            ->get()
-            ->filter(
-                fn (Trip $trip) => $this->seatAvailability->legStops($trip, $fromCity->uuid, $toCity->uuid) !== null
-            )
-            ->values();
+            ->get();
+
+        $legsByTripId = $trips
+            ->mapWithKeys(fn (Trip $trip) => [
+                $trip->id => $this->seatAvailability->legStops($trip, $fromCity->uuid, $toCity->uuid),
+            ])
+            ->reject(fn (?array $leg) => $leg === null)
+            ->all();
+
+        return [
+            $trips->filter(fn (Trip $trip) => isset($legsByTripId[$trip->id]))->values(),
+            $legsByTripId,
+        ];
     }
 }

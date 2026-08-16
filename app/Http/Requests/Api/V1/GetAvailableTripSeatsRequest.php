@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\V1;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * Get Available Trip Seats Request
@@ -25,8 +26,8 @@ class GetAvailableTripSeatsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'from_city' => ['required', 'string', 'exists:cities,uuid'],
-            'to_city' => ['required', 'string', 'exists:cities,uuid', 'different:from_city'],
+            'from_city' => ['required', 'string', Rule::exists('cities', 'uuid')->whereNull('deleted_at')],
+            'to_city' => ['required', 'string', Rule::exists('cities', 'uuid')->whereNull('deleted_at'), 'different:from_city'],
             'date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
         ];
     }

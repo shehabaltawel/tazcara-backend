@@ -17,6 +17,8 @@ return new class extends Migration
             $table->foreignId('trip_id')->constrained('trips');
             $table->foreignId('city_id')->constrained('cities');
             $table->unsignedSmallInteger('sequence');
+            $table->unique(['trip_id', 'city_id']);
+            $table->unique(['trip_id', 'sequence']);
             $table->decimal('price_from_origin', 8, 2);
             $table->dateTime('departure_timestamp');
             $table->dateTime('arrival_timestamp');
