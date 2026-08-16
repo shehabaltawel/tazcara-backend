@@ -22,7 +22,12 @@ class StoreTripBookingController extends BaseController
      */
     public function __invoke(StoreBookingRequest $request, Trip $trip): JsonResponse
     {
-        $bookings = $this->bookingService->bookMany($trip, $request->user(), $request->validated());
+        $bookings = $this->bookingService->bookMany(
+            $trip,
+            $request->user(),
+            $request->validated(),
+            $request->header('Idempotency-Key')
+        );
 
         return $this->jsonSuccess(
             BookingResource::collection($bookings),

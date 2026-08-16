@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BookingStatusEnum;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\RouteKey;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -11,9 +12,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Enums\BookingStatusEnum;
 
-#[Fillable(['user_id', 'seat_id', 'from_trip_city_id', 'to_trip_city_id', 'price', 'status'])]
+#[Fillable(['user_id', 'seat_id', 'from_trip_city_id', 'to_trip_city_id', 'price', 'status', 'idempotency_key'])]
 #[RouteKey('uuid')]
 
 /**

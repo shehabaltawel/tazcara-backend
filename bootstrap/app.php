@@ -12,6 +12,7 @@ use Laravel\Sanctum\Http\Middleware\CheckAbilities;
 use Laravel\Sanctum\Http\Middleware\CheckAbility;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -40,6 +41,7 @@ return Application::configure(basePath: dirname(__DIR__))
             [$status, $message, $errors] = match (true) {
                 $exception instanceof InvalidArgumentException => [Response::HTTP_BAD_REQUEST, $exception->getMessage(), null],
                 $exception instanceof ModelNotFoundException => [Response::HTTP_NOT_FOUND, 'Resource not found', null],
+                $exception instanceof NotFoundHttpException => [Response::HTTP_NOT_FOUND, 'Resource not found', null],
                 $exception instanceof AuthenticationException => [Response::HTTP_UNAUTHORIZED, $exception->getMessage(), null],
                 $exception instanceof ValidationException => [
                     Response::HTTP_UNPROCESSABLE_ENTITY,
@@ -62,10 +64,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if ($errors !== null) {
                 $response['errors'] = $errors;
-            }
-
-            if (! app()->environment('production')) {
-                $response['debug'] = $exception::class.': '.$exception->getMessage();
             }
 
             return response()->json($response, $status);

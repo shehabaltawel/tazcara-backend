@@ -19,6 +19,16 @@ class StoreBookingRequest extends FormRequest
     }
 
     /**
+     * Merge the Idempotency-Key header into the validated input.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'idempotency_key' => $this->header('Idempotency-Key'),
+        ]);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, mixed>
@@ -31,6 +41,7 @@ class StoreBookingRequest extends FormRequest
             'from_city' => ['required', 'string', Rule::exists('cities', 'uuid')->whereNull('deleted_at')],
             'to_city' => ['required', 'string', Rule::exists('cities', 'uuid')->whereNull('deleted_at'), 'different:from_city'],
             'date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'idempotency_key' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

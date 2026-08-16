@@ -17,8 +17,14 @@ class TripSeatsResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'requested_from_city' => $this->whenLoaded('requestedFromCity', fn () => $this->requestedFromCity->name),
-            'requested_to_city' => $this->whenLoaded('requestedToCity', fn () => $this->requestedToCity->name),
+            'requested_from_city' => $this->whenLoaded('requestedFromCity', fn () => [
+                'id' => $this->requestedFromCity->uuid,
+                'name' => $this->requestedFromCity->name,
+            ]),
+            'requested_to_city' => $this->whenLoaded('requestedToCity', fn () => [
+                'id' => $this->requestedToCity->uuid,
+                'name' => $this->requestedToCity->name,
+            ]),
             'requested_date' => $this->requested_date,
             'id' => $this->uuid,
             'from_city' => $this->whenLoaded('fromCity', fn () => $this->fromCity->name),

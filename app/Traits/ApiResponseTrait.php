@@ -25,18 +25,12 @@ trait ApiResponseTrait
     /**
      * * Generate failure json response
      */
-    public function jsonError(?string $message, int $code = Response::HTTP_BAD_REQUEST, string $debug = ''): JsonResponse
+    public function jsonError(?string $message, int $code = Response::HTTP_BAD_REQUEST): JsonResponse
     {
-        $response = [
+        return response()->json([
             'error' => true,
             'message' => $message,
             'data' => [],
-        ];
-
-        if (! app()->environment('production')) {
-            $response['debug'] = $debug;
-        }
-
-        return response()->json($response, $code);
+        ], $code);
     }
 }

@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Booking;
 use App\Enums\BookingStatusEnum;
+use App\Models\Booking;
 use App\Models\Seat;
 use App\Models\TripCity;
 use App\Models\User;
