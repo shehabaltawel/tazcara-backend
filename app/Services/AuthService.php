@@ -3,71 +3,54 @@
 namespace App\Services;
 
 use App\Models\User;
-use Illuminate\Auth\AuthenticationException;
-use Illuminate\Contracts\Auth\Factory;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Auth Service
  */
 class AuthService
 {
-    public function __construct(private readonly Factory $auth) {}
-
     /**
      * Register a new user and issue an access token.
      */
     public function register(array $data): array
     {
-        return $this->authenticateResponse(User::create($data));
+        return $this->tokenResponse(User::create($data));
     }
 
     /**
      * Authenticate the user with the given credentials and issue an access token.
      *
-     * @throws AuthenticationException
+     * @throws ValidationException
      */
     public function login(array $credentials): array
     {
-        return $this->authenticateResponse($this->authenticateUser($credentials));
-    }
+        $user = User::where('email', $credentials['email'])->first();
 
-    /**
-     * Authenticate the user with the given credentials.
-     *
-     * @throws AuthenticationException
-     */
-    private function authenticateUser(array $credentials): User
-    {
-        throw_if(
-            ! $this->auth->guard()->attempt($credentials),
-            AuthenticationException::class,
-            'Invalid credentials'
-        );
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'email' => ['The provided credentials are incorrect.'],
+            ]);
+        }
 
-        /** @var User $user */
-        $user = $this->auth->guard()->user();
-
-        return $user;
+        return $this->tokenResponse($user);
     }
 
     /**
      * Prepare the response data for a successful authentication.
      */
-    private function authenticateResponse(User $user): array
+    private function tokenResponse(User $user): array
     {
+        $token = $user->createToken('auth_token');
+
         return [
-            'access_token' => $this->issueToken($user),
+            'token' => $token->plainTextToken,
             'token_type' => 'Bearer',
-            'expires_in' => config('sanctum.expiration') * 60,
+            'expires_in' => $token->accessToken->created_at
+                ->addMinutes((int) config('sanctum.expiration'))
+                ->diffInSeconds(now()),
             'user' => $user,
         ];
-    }
-
-    /**
-     * Issue a Sanctum personal access token for the given user.
-     */
-    private function issueToken(User $user): string
-    {
-        return $user->createToken('auth_token')->plainTextToken;
     }
 }

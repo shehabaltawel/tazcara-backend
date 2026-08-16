@@ -9,6 +9,7 @@ Route::prefix('v1')->group(function () {
     Route::prefix('auth')->middleware('throttle:6,1')->group(function () {
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login', [AuthController::class, 'login']);
+        Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
     });
 
     Route::prefix('trips')->middleware('auth:sanctum')->group(function () {
