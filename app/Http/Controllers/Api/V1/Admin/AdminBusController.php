@@ -33,7 +33,7 @@ class AdminBusController extends BaseController
     public function store(StoreBusRequest $request): JsonResponse
     {
         return $this->jsonSuccess(
-            new BusResource($this->busService->create($request->validated())),
+            BusResource::make($this->busService->create($request->validated())),
             'Bus created successfully',
             Response::HTTP_CREATED
         );

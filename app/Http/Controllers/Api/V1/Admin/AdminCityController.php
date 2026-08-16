@@ -31,7 +31,7 @@ class AdminCityController extends BaseController
     public function store(StoreCityRequest $request): JsonResponse
     {
         return $this->jsonSuccess(
-            new CityResource($this->cityService->create($request->validated())),
+            CityResource::make($this->cityService->create($request->validated())),
             'City created successfully',
             Response::HTTP_CREATED
         );

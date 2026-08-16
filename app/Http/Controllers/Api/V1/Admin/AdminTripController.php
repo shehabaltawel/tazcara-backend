@@ -37,7 +37,7 @@ class AdminTripController extends BaseController
     public function store(StoreTripRequest $request): JsonResponse
     {
         return $this->jsonSuccess(
-            new TripResource($this->adminTripService->create($request->validated())),
+            TripResource::make($this->adminTripService->create($request->validated())),
             'Trip created successfully',
             Response::HTTP_CREATED
         );
