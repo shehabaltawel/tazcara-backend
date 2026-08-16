@@ -1,0 +1,23 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+/**
+ * Ensures the authenticated user is an administrator.
+ */
+class EnsureUserIsAdmin
+{
+    /**
+     * Handle an incoming request.
+     */
+    public function handle(Request $request, Closure $next): Response
+    {
+        abort_unless($request->user()?->isAdmin() === true, Response::HTTP_FORBIDDEN);
+
+        return $next($request);
+    }
+}
