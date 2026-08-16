@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\RouteKey;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['bus_id', 'from_city_id', 'to_city_id', 'departure_timestamp', 'arrival_timestamp'])]
+#[RouteKey('uuid')]
 
 /**
  * Trip Model
@@ -27,14 +29,6 @@ class Trip extends Model
     public function uniqueIds(): array
     {
         return ['uuid'];
-    }
-
-    /**
-     * Get the route key for the model.
-     */
-    public function getRouteKeyName(): string
-    {
-        return 'uuid';
     }
 
     /**

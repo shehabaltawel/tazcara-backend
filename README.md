@@ -207,9 +207,9 @@ All endpoints live under `/api/v1`. Everything except `auth/register` and `auth/
 
 ### Postman collection
 
-A ready-to-use Postman collection is available:
+A ready-to-use Postman collection (Collection v2.1) is committed at [`postman/tazcara_collection.json`](postman/tazcara_collection.json). Import it in Postman via **Import → Upload Files**, then set the collection variables (`access_token`, `trip_id`, `seat_id`, `city_id`, `bus_id`) from the API responses.
 
-**https://go.postman.co/workspace/d6721efd-1ef0-441b-8ac0-8450f1da36cd**
+The legacy cloud workspace is at **https://go.postman.co/workspace/d6721efd-1ef0-441b-8ac0-8450f1da36cd**.
 
 ### Authentication
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\RouteKey;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -12,6 +13,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['first_name', 'last_name', 'email', 'mobile', 'password', 'is_admin'])]
 #[Hidden(['password', 'remember_token'])]
+#[RouteKey('uuid')]
 
 /**
  * User Model
@@ -26,14 +28,6 @@ class User extends Authenticatable
     public function uniqueIds(): array
     {
         return ['uuid'];
-    }
-
-    /**
-     * Get the route key for the model.
-     */
-    public function getRouteKeyName(): string
-    {
-        return 'uuid';
     }
 
     /**

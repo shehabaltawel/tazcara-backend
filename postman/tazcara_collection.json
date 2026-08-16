@@ -1,0 +1,332 @@
+{
+  "info": {
+    "name": "Tazcara API",
+    "description": "Tazcara bus-booking API. Base URL: http://localhost:8000/api/v1. Auth endpoints are throttled (6/min). All endpoints except register/login require a Bearer token. The admin area requires an admin account (admin@example.com / password).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "trip_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bus_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "seat_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "city_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"email\": \"john@example.com\",\n  \"mobile\": \"01000000000\",\n  \"password\": \"secret123\",\n  \"password_confirmation\": \"secret123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('access_token', json.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trips",
+      "item": [
+        {
+          "name": "Available seats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/trips/available-seats?from_city={{city_id}}&to_city={{city_id}}&date=2026-08-17",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "available-seats"],
+              "query": [
+                {
+                  "key": "from_city",
+                  "value": "{{city_id}}"
+                },
+                {
+                  "key": "to_city",
+                  "value": "{{city_id}}"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-08-17"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Book seats",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "",
+                "disabled": true
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seats\": [\"{{seat_id}}\"],\n  \"from_city\": \"{{city_id}}\",\n  \"to_city\": \"{{city_id}}\",\n  \"date\": \"2026-08-17\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{trip_id}}/book-seats",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{trip_id}}", "book-seats"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Trips",
+          "item": [
+            {
+              "name": "List trips",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/admin/trips",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "trips"]
+                }
+              }
+            },
+            {
+              "name": "Create trip",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"bus_id\": \"\",\n  \"stops\": [\n    { \"city_id\": \"\", \"price_from_origin\": 0,   \"departure_timestamp\": \"2026-08-20 07:00:00\", \"arrival_timestamp\": \"2026-08-20 07:00:00\" },\n    { \"city_id\": \"\", \"price_from_origin\": 50,  \"departure_timestamp\": \"2026-08-20 09:00:00\", \"arrival_timestamp\": \"2026-08-20 09:00:00\" },\n    { \"city_id\": \"\", \"price_from_origin\": 90,  \"departure_timestamp\": \"2026-08-20 11:30:00\", \"arrival_timestamp\": \"2026-08-20 11:30:00\" },\n    { \"city_id\": \"\", \"price_from_origin\": 140, \"departure_timestamp\": \"2026-08-20 14:00:00\", \"arrival_timestamp\": \"2026-08-20 14:00:00\" }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/trips",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "trips"]
+                }
+              }
+            },
+            {
+              "name": "Delete trip",
+              "request": {
+                "method": "DELETE",
+                "url": {
+                  "raw": "{{baseUrl}}/admin/trips/{{trip_id}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "trips", "{{trip_id}}"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cities",
+          "item": [
+            {
+              "name": "List cities",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/admin/cities",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "cities"]
+                }
+              }
+            },
+            {
+              "name": "Create city",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ras Sedr\",\n  \"code\": \"RSD\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/cities",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "cities"]
+                }
+              }
+            },
+            {
+              "name": "Delete city",
+              "request": {
+                "method": "DELETE",
+                "url": {
+                  "raw": "{{baseUrl}}/admin/cities/{{city_id}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "cities", "{{city_id}}"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buses",
+          "item": [
+            {
+              "name": "List buses",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/admin/buses",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "buses"]
+                }
+              }
+            },
+            {
+              "name": "Create bus",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"class\": \"First Class\",\n  \"plate_number\": \"XYZ-1234\",\n  \"seats\": [\"A1\", \"A2\", \"A3\"]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/buses",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "buses"]
+                }
+              }
+            },
+            {
+              "name": "Delete bus",
+              "request": {
+                "method": "DELETE",
+                "url": {
+                  "raw": "{{baseUrl}}/admin/buses/{{bus_id}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "buses", "{{bus_id}}"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
