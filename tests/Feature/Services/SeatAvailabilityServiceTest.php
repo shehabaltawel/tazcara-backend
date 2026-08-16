@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Bus;
+use App\Models\Seat;
 use App\Services\SeatAvailabilityService;
 use Illuminate\Support\Str;
 use Tests\Feature\Services\CreatesTrips;
@@ -7,81 +9,83 @@ use Tests\Feature\Services\CreatesTrips;
 uses(CreatesTrips::class);
 
 beforeEach(function (): void {
+    $this->resetCities();
     $this->availability = new SeatAvailabilityService;
 });
 
-it('returns every bus seat on a free leg', function (): void {
+it('resolves a leg to its ordered stops, or null when the leg is invalid', function (string $from, string $to, ?int $fromSequence, ?int $toSequence): void {
     $trip = $this->standardTrip();
 
-    expect($this->availability->availableSeatsFor($trip, 0, 3))->toHaveCount(2);
+    $leg = $this->availability->legStops(
+        $trip,
+        $this->stop($trip, $from)->city->uuid,
+        $this->stop($trip, $to)->city->uuid
+    );
+
+    if ($fromSequence === null) {
+        expect($leg)->toBeNull();
+
+        return;
+    }
+
+    expect($leg['from_sequence'])->toBe($fromSequence)
+        ->and($leg['to_sequence'])->toBe($toSequence);
+})->with([
+    'full leg' => ['CAI', 'ASY', 0, 3],
+    'adjacent leg' => ['CAI', 'FYM', 0, 1],
+    'reversed leg' => ['ASY', 'CAI', null, null],
+    'same city' => ['CAI', 'CAI', null, null],
+]);
+
+it('returns null when a city is not a stop on the trip', function (): void {
+    $trip = $this->standardTrip();
+
+    expect($this->availability->legStops($trip, (string) Str::uuid(), $this->stop($trip, 'CAI')->city->uuid))->toBeNull();
 });
 
-it('excludes a seat taken on an overlapping leg', function (): void {
+it('blocks a seat only on legs that overlap the booked segment', function (): void {
     $trip = $this->standardTrip();
     $this->bookSeat($trip, 'S1', 'CAI', 'MNY');
 
-    $seats = $this->availability->availableSeatsFor($trip, 0, 3);
+    // CAI -> ASY overlaps the booked CAI -> MNY segment.
+    expect($this->availabilityFor($trip, 'CAI', 'ASY')->pluck('code')->all())->toBe(['S2']);
 
-    expect($seats)->toHaveCount(1)
-        ->and($seats->first()->code)->toBe('S2');
+    // MNY -> ASY only touches at MNY: the half-open leg [MNY, ASY) is free.
+    expect($this->availabilityFor($trip, 'MNY', 'ASY')->pluck('code')->all())->toBe(['S1', 'S2']);
 });
 
-it('keeps a seat free on a non-overlapping adjacent leg', function (): void {
-    $trip = $this->standardTrip();
-    $this->bookSeat($trip, 'S1', 'CAI', 'MNY');
+it('scopes bookings to the trip, not the bus', function (): void {
+    $bus = Bus::factory()->create();
+    $trip = $this->makeTrip([
+        ['name' => 'CAI', 'price' => 0],
+        ['name' => 'FYM', 'price' => 50],
+        ['name' => 'MNY', 'price' => 90],
+        ['name' => 'ASY', 'price' => 140],
+    ], 2, $bus);
+    $otherTrip = $this->tripOnBus($bus, [
+        ['name' => 'FYM', 'price' => 0],
+        ['name' => 'MNY', 'price' => 40],
+        ['name' => 'ASY', 'price' => 90],
+    ]);
+    $this->bookSeat($trip, 'S1', 'CAI', 'ASY');
 
-    expect($this->availability->availableSeatsFor($trip, 2, 3))->toHaveCount(2);
+    expect($this->availabilityFor($trip, 'CAI', 'ASY')->pluck('code')->all())->toBe(['S2'])
+        ->and($this->availabilityFor($otherTrip, 'FYM', 'ASY')->pluck('code')->all())->toBe(['S1', 'S2']);
 });
 
-it('is not affected by bookings on other trips', function (): void {
-    $firstTrip = $this->standardTrip();
-    $otherTrip = $this->standardTrip();
-    $this->bookSeat($firstTrip, 'S1', 'CAI', 'ASY');
-
-    expect($this->availability->availableSeatsFor($otherTrip, 0, 3))->toHaveCount(2);
-});
-
-it('ignores non-confirmed bookings', function (): void {
+it('ignores cancelled bookings when reporting availability', function (): void {
     $trip = $this->standardTrip();
     $this->bookSeat($trip, 'S1', 'CAI', 'ASY', status: 'cancelled');
 
-    expect($this->availability->availableSeatsFor($trip, 0, 3))->toHaveCount(2);
+    expect($this->availabilityFor($trip, 'CAI', 'ASY')->pluck('code')->all())->toBe(['S1', 'S2']);
 });
 
-it('tells whether a seat is free for a leg', function (): void {
+it('reports the taken seats when re-checking availability at booking time', function (): void {
     $trip = $this->standardTrip();
-
-    expect($this->availability->isSeatAvailable($trip, $this->seat($trip, 'S1'), 0, 3))->toBeTrue();
-
     $this->bookSeat($trip, 'S1', 'CAI', 'MNY');
 
-    expect($this->availability->isSeatAvailable($trip, $this->seat($trip, 'S1'), 0, 3))->toBeFalse()
-        ->and($this->availability->isSeatAvailable($trip, $this->seat($trip, 'S1'), 2, 3))->toBeTrue();
+    $seats = Seat::where('bus_id', $trip->bus_id)->get();
+    $unavailable = $this->availability->unavailableSeats($trip, $seats, 0, 3);
+
+    expect($unavailable->pluck('code')->all())->toBe(['S1']);
 });
-
-it('resolves a leg to its ordered stops and sequence positions', function (): void {
-    $trip = $this->standardTrip();
-    $from = $this->stop($trip, 'CAI');
-    $to = $this->stop($trip, 'ASY');
-
-    $leg = $this->availability->legStops($trip, $from->city->uuid, $to->city->uuid);
-
-    expect($leg)->not->toBeNull()
-        ->and($leg['from_sequence'])->toBe(0)
-        ->and($leg['to_sequence'])->toBe(3)
-        ->and($leg['from_trip_city']->id)->toBe($from->id)
-        ->and($leg['to_trip_city']->id)->toBe($to->id);
-});
-
-it('returns null when the leg is reversed or a city is missing', function (string $fromCity, string $toCity): void {
-    $trip = $this->standardTrip();
-
-    $fromUuid = $fromCity === 'MISSING' ? (string) Str::uuid() : $this->stop($trip, $fromCity)->city->uuid;
-    $toUuid = $toCity === 'MISSING' ? (string) Str::uuid() : $this->stop($trip, $toCity)->city->uuid;
-
-    expect($this->availability->legStops($trip, $fromUuid, $toUuid))->toBeNull();
-})->with([
-    'reversed leg' => ['ASY', 'CAI'],
-    'missing origin' => ['MISSING', 'CAI'],
-    'missing destination' => ['CAI', 'MISSING'],
-]);

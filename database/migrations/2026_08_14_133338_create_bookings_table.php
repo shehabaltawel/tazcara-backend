@@ -20,6 +20,8 @@ return new class extends Migration
             $table->foreignId('to_trip_city_id')->constrained('trip_cities');
             $table->decimal('price', 8, 2);
             $table->string('status')->default('confirmed');
+            $table->string('idempotency_key')->nullable();
+            $table->unique(['user_id', 'idempotency_key', 'seat_id']);
             $table->timestamps();
             $table->softDeletes();
         });

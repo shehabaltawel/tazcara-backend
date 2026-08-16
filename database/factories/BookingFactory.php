@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\BookingStatusEnum;
 use App\Models\Booking;
 use App\Models\Seat;
 use App\Models\TripCity;
@@ -26,7 +27,7 @@ class BookingFactory extends Factory
             'from_trip_city_id' => TripCity::factory(),
             'to_trip_city_id' => TripCity::factory(),
             'price' => 100,
-            'status' => 'confirmed',
+            'status' => BookingStatusEnum::CONFIRMED,
         ];
     }
 }

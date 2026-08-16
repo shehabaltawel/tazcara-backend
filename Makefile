@@ -2,6 +2,7 @@
 
 .PHONY: help up down restart logs ps
 .PHONY: art migrate fresh seed shell composer guard-local
+.PHONY: test pint dump
 
 help:
 	@echo "Usage: make <target>"
@@ -19,6 +20,9 @@ help:
 	@echo "  seed          db:seed (refused unless APP_ENV=local)"
 	@echo "  shell         Open a shell inside the app container"
 	@echo "  composer ARG=composer-args   Run composer (install/require)"
+	@echo "  test          Run the Pest suite inside the app container"
+	@echo "  pint          Run Laravel Pint (code style) inside the app container"
+	@echo "  dump          Regenerate database/dumps/tazcara.sql from the live DB"
 	@echo ""
 	@echo "  'fresh' and 'seed' are destructive — they refuse to run when"
 	@echo "  APP_ENV is not local/testing, so CI/CD can never wipe a"
@@ -66,3 +70,19 @@ shell:
 
 composer:
 	docker compose exec app composer $(ARG)
+
+test:
+	docker compose exec app php artisan test
+
+pint:
+	docker compose exec app ./vendor/bin/pint
+
+# Dump the live database to the committed seed file, using the credentials
+# from .env (the db container always talks to MySQL on 127.0.0.1:3306).
+dump:
+	@$(eval DB_PWD := $(shell awk -F= '/^DB_PASSWORD=/{sub(/^DB_PASSWORD=/, ""); gsub(/^["'"'"']|["'"'"']$$/, ""); print}' .env))
+	@$(eval DB_USER := $(shell awk -F= '/^DB_USERNAME=/{print $$2}' .env))
+	@$(eval DB_NAME := $(shell awk -F= '/^DB_DATABASE=/{print $$2}' .env))
+	docker compose exec -e MYSQL_PWD="$(DB_PWD)" db sh -c \
+		'mysqldump -h 127.0.0.1 -u "$(DB_USER)" "$(DB_NAME)" --skip-comments --no-tablespaces --single-transaction' \
+		> database/dumps/tazcara.sql

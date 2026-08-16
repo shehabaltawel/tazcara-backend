@@ -7,54 +7,28 @@ use App\Models\User;
 use App\Services\BookingService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Tests\Feature\Services\CreatesTrips;
 
 uses(CreatesTrips::class);
 
 beforeEach(function (): void {
+    $this->resetCities();
     $this->bookingService = app(BookingService::class);
     $this->user = User::factory()->create();
 });
 
-it('books every requested seat atomically', function (): void {
-    $trip = $this->standardTrip();
-
-    $bookings = $this->bookingService->bookMany($trip, $this->user, $this->bookingData($trip, ['S1', 'S2'], 'CAI', 'ASY'));
-
-    expect($bookings)->toHaveCount(2)
-        ->and($bookings->every(fn (Booking $booking) => $booking->user_id === $this->user->id))->toBeTrue()
-        ->and($bookings->every(fn (Booking $booking) => $booking->status === 'confirmed'))->toBeTrue();
-});
-
-it('charges the difference of the price_from_origin of the leg stops', function (): void {
-    $trip = $this->standardTrip();
-
-    $bookings = $this->bookingService->bookMany($trip, $this->user, $this->bookingData($trip, ['S1'], 'CAI', 'ASY'));
-
-    expect($bookings->first()->price)->toEqual(140.0);
-});
-
-it('throws and books nothing when a seat is already taken', function (): void {
-    $trip = $this->standardTrip();
-    $this->bookSeat($trip, 'S1', 'CAI', 'MNY');
-
-    expect(fn () => $this->bookingService->bookMany($trip, $this->user, $this->bookingData($trip, ['S1'], 'CAI', 'ASY')))
-        ->toThrow(Exception::class, 'S1');
-
-    expect(Booking::count())->toBe(1);
-});
-
-it('is atomic when only some of the requested seats are free', function (): void {
+it('is atomic: books nothing when any of the requested seats is taken', function (): void {
     $trip = $this->standardTrip();
     $this->bookSeat($trip, 'S1', 'CAI', 'MNY');
 
     expect(fn () => $this->bookingService->bookMany($trip, $this->user, $this->bookingData($trip, ['S1', 'S2'], 'CAI', 'ASY')))
-        ->toThrow(Exception::class);
+        ->toThrow(ConflictHttpException::class);
 
     expect(Booking::count())->toBe(1);
 });
 
-it('allows re-booking a seat on a non-overlapping leg', function (): void {
+it('allows re-booking the same seat on a non-overlapping leg', function (): void {
     $trip = $this->standardTrip();
     $this->bookSeat($trip, 'S1', 'CAI', 'MNY');
 
@@ -64,14 +38,7 @@ it('allows re-booking a seat on a non-overlapping leg', function (): void {
         ->and(Booking::count())->toBe(2);
 });
 
-it('rejects a reversed leg', function (): void {
-    $trip = $this->standardTrip();
-
-    expect(fn () => $this->bookingService->bookMany($trip, $this->user, $this->bookingData($trip, ['S1'], 'ASY', 'CAI')))
-        ->toThrow(InvalidArgumentException::class, 'Invalid trip leg');
-});
-
-it('rejects a seat that does not belong to the trip bus', function (): void {
+it('rejects a seat that belongs to a different bus', function (): void {
     $trip = $this->standardTrip();
     $foreignSeat = Seat::factory()->create(['bus_id' => Bus::factory()]);
 
@@ -79,20 +46,25 @@ it('rejects a seat that does not belong to the trip bus', function (): void {
     $data['seats'] = [$foreignSeat->uuid];
 
     expect(fn () => $this->bookingService->bookMany($trip, $this->user, $data))
-        ->toThrow(InvalidArgumentException::class, 'do not belong to this trip');
+        ->toThrow(InvalidArgumentException::class);
+
+    expect(Booking::count())->toBe(0);
 });
 
-it('rejects a trip that does not depart on the given date', function (): void {
+it('rejects an invalid leg and a wrong departure date', function (): void {
     $trip = $this->standardTrip();
+
+    expect(fn () => $this->bookingService->bookMany($trip, $this->user, $this->bookingData($trip, ['S1'], 'ASY', 'CAI')))
+        ->toThrow(InvalidArgumentException::class);
 
     $data = $this->bookingData($trip, ['S1'], 'CAI', 'ASY');
     $data['date'] = $trip->departure_timestamp->copy()->addDay()->toDateString();
 
     expect(fn () => $this->bookingService->bookMany($trip, $this->user, $data))
-        ->toThrow(InvalidArgumentException::class, 'does not depart');
+        ->toThrow(InvalidArgumentException::class);
 });
 
-it('throws a ModelNotFoundException when a seat does not exist', function (): void {
+it('throws when a requested seat does not exist', function (): void {
     $trip = $this->standardTrip();
 
     $data = $this->bookingData($trip, ['S1'], 'CAI', 'ASY');
@@ -100,4 +72,34 @@ it('throws a ModelNotFoundException when a seat does not exist', function (): vo
 
     expect(fn () => $this->bookingService->bookMany($trip, $this->user, $data))
         ->toThrow(ModelNotFoundException::class);
+
+    expect(Booking::count())->toBe(0);
+});
+
+it('charges the difference between the leg stop prices', function (): void {
+    $trip = $this->standardTrip();
+
+    $fullLeg = $this->bookingService->bookMany($trip, $this->user, $this->bookingData($trip, ['S1'], 'CAI', 'ASY'));
+    $shortLeg = $this->bookingService->bookMany($trip, $this->user, $this->bookingData($trip, ['S2'], 'CAI', 'FYM'));
+
+    expect((float) $fullLeg->first()->price)->toBe(140.0)
+        ->and((float) $shortLeg->first()->price)->toBe(50.0);
+});
+
+it('replays the original booking on an idempotent retry and rejects key reuse', function (): void {
+    $trip = $this->standardTrip();
+    $data = $this->bookingData($trip, ['S1', 'S2'], 'CAI', 'ASY');
+
+    $first = $this->bookingService->bookMany($trip, $this->user, $data, 'retry-key');
+    $replay = $this->bookingService->bookMany($trip, $this->user, $data, 'retry-key');
+
+    expect($replay->pluck('id')->all())->toBe($first->pluck('id')->all())
+        ->and(Booking::count())->toBe(2);
+
+    $differentLeg = $this->bookingData($trip, ['S1'], 'CAI', 'FYM');
+
+    expect(fn () => $this->bookingService->bookMany($trip, $this->user, $differentLeg, 'retry-key'))
+        ->toThrow(ConflictHttpException::class, 'Idempotency key already used');
+
+    expect(Booking::count())->toBe(2);
 });

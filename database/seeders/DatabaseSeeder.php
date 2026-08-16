@@ -25,6 +25,17 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        User::updateOrCreate(
+            ['email' => 'admin@example.com'],
+            [
+                'first_name' => 'Admin',
+                'last_name' => 'User',
+                'password' => bcrypt('password'),
+                'email_verified_at' => now(),
+                'is_admin' => true,
+            ]
+        );
+
         $this->call([
             CitySeeder::class,
             BusSeeder::class,
